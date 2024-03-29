@@ -10,69 +10,101 @@ Serial::~Serial()
    close();
 }
 
+/*
+Open a COM Port
+@param port Port Name, e.g. "COM11"
+@param baud Baud Rate
+@return Returns 0 when successful
+*/
 int Serial::open(const char *port, uint32_t baud)
 {
    _port = port;
 
    std::string p = "\\\\.\\";
    p += _port;
+
    _handle = CreateFile(p.c_str(), GENERIC_READ | GENERIC_WRITE, 0, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
 
    if (_handle == INVALID_HANDLE_VALUE)
    {
       if (GetLastError() == ERROR_FILE_NOT_FOUND)
       {
-         // Port not found
-         return -1;
+         return SERIAL_ERR::PORT_NOT_FOUND;
       }
-      // Other error
-      return -2;
-   }
 
-   set_comm_state(baud, 8, ONESTOPBIT, NOPARITY);
-
-   // Set timeouts
-   COMMTIMEOUTS timeout = {0};
-   timeout.ReadIntervalTimeout = 1;
-   timeout.ReadTotalTimeoutConstant = 0;
-   timeout.ReadTotalTimeoutMultiplier = 0;
-   // timeout.WriteTotalTimeoutConstant = 50;
-   // timeout.WriteTotalTimeoutMultiplier = 10;
-
-   if (!SetCommTimeouts(_handle, &timeout))
-   {
-      return -4;
+      return SERIAL_ERR::OPEN_ERR;
    }
 
    _is_open = true;
 
-   return 0;
+   int err = update_com_state();
+
+   if (err != SERIAL_ERR::OK)
+   {
+      return err;
+   }
+
+   err = update_timeouts();
+
+   if (err != SERIAL_ERR::OK)
+   {
+      return err;
+   }
+
+   return SERIAL_ERR::OK;
 }
 
+/*
+Close the COM Port if open
+@return Returns 0 when successful
+*/
 int Serial::close()
 {
    _is_open = false;
-   return CloseHandle(_handle);
+
+   return (CloseHandle(_handle) ? SERIAL_ERR::OK : SERIAL_ERR::CLOSE_ERR);
 }
 
+/*
+Send bytes of vector via the open COM Port
+@param data Data vector that contains the bytes for sending
+@return Returns number of bytes written or error code
+*/
 int Serial::write(std::vector<uint8_t> data)
 {
    return write(&data[0], data.size());
 }
 
+/*
+Send bytes of array via the open COM Port
+@param data Data byte array
+@param length Number of bytes to send
+@return Returns number of bytes sent or error code
+*/
 int Serial::write(uint8_t *data, int length)
 {
+   if (!_is_open)
+   {
+      return SERIAL_ERR::NOT_OPEN;
+   }
+
    DWORD bytes_written = 0;
 
    if (!WriteFile(_handle, (char *)data, length, &bytes_written, NULL))
    {
-      return -1;
+      return SERIAL_ERR::WRITE_ERR;
    }
 
    return bytes_written;
 }
 
-int Serial::read(uint8_t *buffer, int n)
+/*
+Read bytes to buffer array
+@param data Data byte array for buffering the data
+@param length Number of bytes to read
+@return Returns number of bytes read or error code
+*/
+int Serial::read(uint8_t *buffer, int length)
 {
    if (!_is_open)
    {
@@ -81,7 +113,7 @@ int Serial::read(uint8_t *buffer, int n)
 
    DWORD bytes_read = 0;
 
-   if (!ReadFile(_handle, (char *)buffer, n, &bytes_read, NULL))
+   if (!ReadFile(_handle, (char *)buffer, length, &bytes_read, NULL))
    {
       return SERIAL_ERR::READ_ERR;
    }
@@ -89,6 +121,132 @@ int Serial::read(uint8_t *buffer, int n)
    return bytes_read;
 }
 
+/*
+Applies the saved communication settings to the open port
+@return Returns 0 when successful
+*/
+int Serial::update_com_state()
+{
+   if (!_is_open)
+   {
+      return SERIAL_ERR::NOT_OPEN;
+   }
+
+   if (!GetCommState(_handle, &_serial_params))
+   {
+      return SERIAL_ERR::GET_COM_STATE;
+   }
+
+   _serial_params.BaudRate = _baud;
+   _serial_params.ByteSize = _byte_size;
+   _serial_params.StopBits = _stop_bits;
+   _serial_params.Parity = _parity;
+
+   if (!SetCommState(_handle, &_serial_params))
+   {
+      return SERIAL_ERR::SET_COM_STATE;
+   }
+
+   return SERIAL_ERR::OK;
+}
+
+/*
+Applies the saved timeout settings to the open port
+@return Returns 0 when successful
+*/
+int Serial::update_timeouts()
+{
+   if (_is_open)
+   {
+      return SERIAL_ERR::NOT_OPEN;
+   }
+
+   return (SetCommTimeouts(_handle, &_timeouts) ? SERIAL_ERR::OK : SERIAL_ERR::SET_TIMEOUTS);
+}
+
+/*
+Update the communication settings. If the port is not open, settings are saved and applied on open() call
+@param baud Baud Rate
+@param byte_size Number of bits per byte, allowed are: 4, 5, 6, 7 or 8
+@param stop_bits Stop bits, where 0 = 1 bit, 1 = 1.5 bits and 2 = 2 bits
+@param parity Parity Bit, where 0 = None, 1 = Odd, 2 = Even, 3 = Mark and 4 = Space
+@return Returns 0 when successful
+*/
+int Serial::set_comm_state(uint32_t baud, uint8_t byte_size, uint8_t stop_bits, uint8_t parity)
+{
+   // Ditch forbidden settings
+   if (parity > 4 || stop_bits > 3 || byte_size < 4 || byte_size > 8)
+   {
+      return SERIAL_ERR::INVALID_PARAM;
+   }
+
+   _baud = baud;
+   _byte_size = byte_size;
+   _stop_bits = stop_bits;
+   _parity = parity;
+
+   return update_com_state();
+}
+
+/*
+Set the read and write timeouts. If the port is not open, settings are saved and applied on open() call
+@param rd_interval Maximum time between read chars
+@param rd_total Constant in milliseconds
+@param rd_mult Multiplier of characters
+@param wr_total Constant in milliseconds
+@param wr_mult Multiplier of characters
+@return Returns 0 when successful
+*/
+int Serial::set_timeouts(uint32_t rd_interval, uint32_t rd_total, uint32_t rd_mult, uint32_t wr_total, uint32_t wr_mult)
+{
+   _timeouts.ReadIntervalTimeout = rd_interval;
+   _timeouts.ReadTotalTimeoutConstant = rd_total;
+   _timeouts.ReadTotalTimeoutMultiplier = rd_mult;
+
+   _timeouts.WriteTotalTimeoutConstant = wr_total;
+   _timeouts.WriteTotalTimeoutMultiplier = wr_mult;
+
+   int err = update_timeouts();
+
+   if (err == SERIAL_ERR::NOT_OPEN)
+   {
+      return SERIAL_ERR::OK;
+   }
+
+   return err;
+}
+
+/*
+Set the baud rate. If the port is not open, baud rate is saved and applied on open() call
+@return Returns 0 when successful
+*/
+int Serial::set_baud_rate(uint32_t baud)
+{
+   _baud = baud;
+
+   int err = update_com_state();
+
+   if (err == SERIAL_ERR::NOT_OPEN)
+   {
+      return SERIAL_ERR::OK;
+   }
+
+   return err;
+}
+
+/*
+Get the last know state of the port (open/closed)
+@return Returns true if the port was opened, false if the port is closed
+*/
+bool Serial::get_open()
+{
+   return _is_open;
+}
+
+/*
+Get the ids of all available COM Ports
+@return Returns a vector that contains all port ids, e.g. "COM11" -> 11
+*/
 std::vector<uint8_t> Serial::get_port_ids()
 {
    char target_path[5000]; // buffer to store the path of the COMPORTS
@@ -96,7 +254,7 @@ std::vector<uint8_t> Serial::get_port_ids()
 
    for (uint8_t i = 0; i < 255; i++)
    {
-      std::string str = "COM" + std::to_string(i); // converting to COM0, COM1, COM2
+      std::string str = "COM" + std::to_string(i);
       DWORD port = QueryDosDevice(str.c_str(), target_path, 5000);
 
       if (port != 0)
@@ -108,11 +266,20 @@ std::vector<uint8_t> Serial::get_port_ids()
    return port_ids;
 }
 
+/*
+Get the names of all available COM Ports
+@return Returns a string vector that contains all port names "COMxx"
+*/
 std::vector<std::string> Serial::get_port_names()
 {
    return get_port_names(true);
 }
 
+/*
+Get the names of all available COM Ports
+@param bool add_prefix If true, "COM" prefix is added to the port number string
+@return Returns a string vector that contains all port names with or without prefix
+*/
 std::vector<std::string> Serial::get_port_names(bool add_prefix)
 {
    std::vector<uint8_t> port_ids = get_port_ids();
@@ -127,49 +294,4 @@ std::vector<std::string> Serial::get_port_names(bool add_prefix)
    }
 
    return coms;
-}
-
-bool Serial::set_comm_state(uint32_t baud, uint8_t byte_size, uint8_t stop_bits, uint8_t parity)
-{
-   // Ditch forbidden settings
-   if (parity > 4 || stop_bits > 3 || byte_size < 4 || byte_size > 8)
-   {
-      return false;
-   }
-
-   if (!GetCommState(_handle, &_serial_params))
-   {
-      return false;
-   }
-
-   _serial_params.BaudRate = baud;
-   _serial_params.ByteSize = byte_size;
-   _serial_params.StopBits = stop_bits;
-   _serial_params.Parity = parity;
-
-   return SetCommState(_handle, &_serial_params);
-}
-
-bool Serial::set_comm_state(DCB state)
-{
-   _serial_params = state;
-
-   return SetCommState(_handle, &_serial_params);
-}
-
-bool Serial::set_baud_rate(uint32_t baud)
-{
-   if (!GetCommState(_handle, &_serial_params))
-   {
-      return false;
-   }
-
-   _serial_params.BaudRate = baud;
-
-   return SetCommState(_handle, &_serial_params);
-}
-
-bool Serial::get_open()
-{
-   return _is_open;
 }
