@@ -3,6 +3,8 @@
 Serial::Serial()
 {
    _serial_params.DCBlength = sizeof(_serial_params);
+
+   set_timeouts(50, 50, 0, 50, 0);
 }
 
 Serial::~Serial()
