@@ -20,6 +20,11 @@ Open a COM Port
 */
 int Serial::open(const char *port, uint32_t baud)
 {
+   if (_is_open)
+   {
+      close();
+   }
+
    _port = port;
 
    std::string p = "\\\\.\\";
