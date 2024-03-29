@@ -11,6 +11,8 @@ C++ Class for Serial Interface on Windows
 
 int main()
 {
+    Serial sp;
+
     if(sp.open("COM11", 115200) != 0)
     {
         std::cout << "Can't open port\n"; 
