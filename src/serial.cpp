@@ -77,9 +77,9 @@ Send bytes of vector via the open COM Port
 @param data Data vector that contains the bytes for sending
 @return Returns number of bytes written or error code
 */
-int Serial::write(std::vector<uint8_t> data)
+int Serial::write(const std::vector<uint8_t> &data)
 {
-   return write(&data[0], data.size());
+   return write(data.data(), data.size());
 }
 
 /*
@@ -88,7 +88,7 @@ Send bytes of array via the open COM Port
 @param length Number of bytes to send
 @return Returns number of bytes sent or error code
 */
-int Serial::write(uint8_t *data, int length)
+int Serial::write(const uint8_t *data, int length)
 {
    if (!_is_open)
    {
