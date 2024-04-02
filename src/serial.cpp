@@ -137,7 +137,7 @@ Send float as string with variable precision
 int Serial::print(float value, uint8_t precision)
 {
    std::stringstream ss;
-   ss << std::setprecision(precision) << value;
+   ss << std::fixed << std::setprecision(precision) << value;
 
    return print(ss.str());
 }
