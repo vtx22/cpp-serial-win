@@ -284,7 +284,7 @@ std::vector<std::string> Serial::get_port_names()
 
 /*
 Get the names of all available COM Ports
-@param bool add_prefix If true, "COM" prefix is added to the port number string
+@param add_prefix If true, "COM" prefix is added to the port number string
 @return Returns a string vector that contains all port names with or without prefix
 */
 std::vector<std::string> Serial::get_port_names(bool add_prefix)
