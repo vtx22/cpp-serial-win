@@ -132,10 +132,7 @@ Send float as string
 */
 int Serial::print(float value)
 {
-   std::stringstream ss;
-   ss << value;
-
-   return print(ss.str());
+   return print(std::to_string(value));
 }
 
 /*
