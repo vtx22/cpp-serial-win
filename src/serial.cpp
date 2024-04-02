@@ -108,11 +108,38 @@ int Serial::write(const uint8_t *data, int length)
 /*
 Send a string message
 @param message String to send
-@return Returns number of bytes ent or error code
+@return Returns number of bytes sent or error code
 */
 int Serial::print(std::string message)
 {
    return write((uint8_t *)message.c_str(), message.size());
+}
+
+/*
+Send float as string
+@param value Float value to print
+@return Returns number of bytes sent or error code
+*/
+int Serial::print(float value)
+{
+   std::stringstream ss;
+   ss << value;
+
+   return print(ss.str());
+}
+
+/*
+Send float as string with variable precision
+@param value Float value to print
+@param precision Number of decimal places
+@return Returns number of bytes sent or error code
+*/
+int Serial::print(float value, uint8_t precision)
+{
+   std::stringstream ss;
+   ss << std::setprecision(precision) << value;
+
+   return print(ss.str());
 }
 
 /*
