@@ -47,6 +47,7 @@ public:
    int write(const uint8_t *data, int length);
 
    int print(std::string message);
+   int print(int value);
    int print(float value);
    int print(float value, uint8_t precision);
 

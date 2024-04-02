@@ -116,6 +116,16 @@ int Serial::print(std::string message)
 }
 
 /*
+Send int as string
+@param value Decimal value to print
+@return Returns number of bytes sent or error code
+*/
+int Serial::print(int value)
+{
+   return print(std::to_string(value));
+}
+
+/*
 Send float as string
 @param value Float value to print
 @return Returns number of bytes sent or error code
