@@ -44,6 +44,8 @@ public:
    int write(const std::vector<uint8_t> &data);
    int write(const uint8_t *data, int length);
 
+   int print(std::string message);
+
    int set_comm_state(uint32_t baud, uint8_t byte_size, uint8_t stop_bits, uint8_t parity);
    int set_timeouts(uint32_t rd_interval, uint32_t rd_total, uint32_t rd_mult, uint32_t wr_total, uint32_t wr_mult);
 

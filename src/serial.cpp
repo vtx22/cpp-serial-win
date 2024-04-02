@@ -106,6 +106,16 @@ int Serial::write(const uint8_t *data, int length)
 }
 
 /*
+Send a string message
+@param message String to send
+@return Returns number of bytes ent or error code
+*/
+int Serial::print(std::string message)
+{
+   return write((uint8_t *)message.c_str(), message.size());
+}
+
+/*
 Read bytes to buffer array
 @param data Data byte array for buffering the data
 @param length Number of bytes to read
