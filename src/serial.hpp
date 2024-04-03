@@ -14,17 +14,17 @@ Serial Port Error Codes
 */
 enum SERIAL_ERR
 {
-    OK = 0,
-    NOT_OPEN = -1,
-    READ_ERR = -2,
-    WRITE_ERR = -3,
-    SET_COM_STATE = -4,
-    GET_COM_STATE = -5,
-    SET_TIMEOUTS = -6,
-    CLOSE_ERR = -7,
-    OPEN_ERR = -8,
-    INVALID_PARAM = -9,
-    PORT_NOT_FOUND = -10,
+    OK = 0,               // Successful
+    NOT_OPEN = -1,        // Port not open, no I/O possible
+    READ_ERR = -2,        // Error while reading from port
+    WRITE_ERR = -3,       // Error while writing to port
+    SET_COM_STATE = -4,   // Cannot set Com State (baud, byte size, etc.)
+    GET_COM_STATE = -5,   // Cannot get the current Com State from Handle
+    SET_TIMEOUTS = -6,    // Cannot set the timeout parameters
+    CLOSE_ERR = -7,       // Error while closing the port
+    OPEN_ERR = -8,        // Error while opening the port
+    INVALID_PARAM = -9,   // Given parameters are not allowed
+    PORT_NOT_FOUND = -10, // Given port name not found
 };
 
 class Serial
