@@ -207,7 +207,7 @@ Applies the saved timeout settings to the open port
 */
 int Serial::update_timeouts()
 {
-    if (_is_open)
+    if (!_is_open)
     {
         return SERIAL_ERR::NOT_OPEN;
     }
