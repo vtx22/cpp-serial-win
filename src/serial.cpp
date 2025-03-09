@@ -99,6 +99,7 @@ int Serial::write(const uint8_t *data, int length)
 
     if (!WriteFile(_handle, (char *)data, length, &bytes_written, NULL))
     {
+        close();
         return SERIAL_ERR::WRITE_ERR;
     }
 
