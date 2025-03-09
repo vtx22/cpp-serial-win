@@ -167,6 +167,7 @@ int Serial::read(uint8_t *buffer, int length)
 
     if (!ReadFile(_handle, (char *)buffer, length, &bytes_read, NULL))
     {
+        close();
         return SERIAL_ERR::READ_ERR;
     }
 
