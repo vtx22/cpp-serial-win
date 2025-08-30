@@ -26,6 +26,7 @@ int Serial::open(const char *port, uint32_t baud)
     }
 
     _port = port;
+    _baud = baud;
 
     std::string p = "\\\\.\\";
     p += _port;
